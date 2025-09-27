@@ -15,6 +15,8 @@ alarm_triggered = False
 adc0 = ADC(Pin(26))  # ADC0
 adc1 = ADC(Pin(27))  # ADC1
 
+card_detect = Pin(15, Pin.IN, Pin.PULL_UP)
+
 # -----------------------------
 # RTC ds3231 class
 # -----------------------------
@@ -146,23 +148,21 @@ def add_time_period_to_rtc_time(rtc):
     def days_in_month(y, m):
         mdays = [31, 29 if is_leap(y) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         return mdays[m-1]
-    second += 10
-    if second >= 60:
-        second -= 60
-        minute += 1
-        if minute >= 60:
-            minute = 0
-            hour += 1
-            if hour >= 24:
-                hour = 0
-                day += 1
-                weekday = weekday + 1 if weekday < 7 else 1
-                if day > days_in_month(year, month):
-                    day = 1
-                    month += 1
-                    if month > 12:
-                        month = 1
-                        year += 1
+
+    minute += 10    # 10 minutes later
+    if minute >= 60:
+        minute -= 60
+        hour += 1
+        if hour >= 24:
+            hour = 0
+            day += 1
+            weekday = weekday + 1 if weekday < 7 else 1
+            if day > days_in_month(year, month):
+                day = 1
+                month += 1
+                if month > 12:
+                    month = 1
+                    year += 1
     w = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
     weekday_str = w[weekday-1]
     alarm_time_str = "{:02d}:{:02d}:{:02d},{},{:04d}-{:02d}-{:02d}".format(
@@ -185,12 +185,21 @@ def clear_alarm_flag():
 if __name__ == '__main__':
     rtc = ds3231(I2C_PORT,I2C_SCL,I2C_SDA)
     set_alarm()
+    
+    # to check SD card is inserted
+    not_inserted = card_detect.value()  # 0: inserted, 1: not inserted
+    
+    if not_inserted == 1:
+        machine.lightsleep()
+
+    # power active & SD card detect indication
+    led = Pin("LED", Pin.OUT)   # PicoのオンボードLEDを指定（通常はGPIO25）
+
+    led.value(1)    # LED点灯
+    time.sleep(0.1)
+    led.value(0)    # LED消灯
 
     logger = SDLoggerVFS(0, 17, SD_ON)
-    value1 = round((adc0.read_u16() >> 4) * 3.3 * 3 / 4096, 2)
-    value2 = round((adc1.read_u16() >> 4) * 3.3 * 2 / 4096, 2)
-    print(value1, value2)
-    logger.write(rtc, value1, value2)
 
     try:
         while True:
@@ -202,8 +211,8 @@ if __name__ == '__main__':
                 value1 = round((adc0.read_u16() >> 4) * 3.3 * 3 / 4096, 2)
                 value2 = round((adc1.read_u16() >> 4) * 3.3 * 2 / 4096, 2)
                 print(value1, value2)
-                if value2 > 1.8:
+                if value2 > 2.0:
                     logger.write(rtc, value1, value2)
-                time.sleep(10)
+                machine.lightsleep()
     except KeyboardInterrupt:
         print("terminated")
