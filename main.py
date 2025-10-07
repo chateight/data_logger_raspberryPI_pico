@@ -171,7 +171,7 @@ def add_time_period_to_rtc_time(rtc):
 
 def set_alarm():
     alarm_time_later = add_time_period_to_rtc_time(rtc)
-    print("Alarm time 10 sec later:", alarm_time_later)
+    print("Alarm time 10 min later:", alarm_time_later)
     rtc.set_alarm_time(alarm_time_later)
     rtc.alarm_pin = Pin(ALARM_PIN, Pin.IN, Pin.PULL_UP)
 
@@ -213,6 +213,6 @@ if __name__ == '__main__':
                 print(value1, value2)
                 if value2 > 2.0:
                     logger.write(rtc, value1, value2)
-                machine.lightsleep()
+                machine.lightsleep(60000 * 10)
     except KeyboardInterrupt:
         print("terminated")
