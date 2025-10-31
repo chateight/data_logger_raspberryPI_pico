@@ -14,6 +14,7 @@ alarm_triggered = False
 
 adc0 = ADC(Pin(26))  # ADC0
 adc1 = ADC(Pin(27))  # ADC1
+adc2 = ADC(Pin(28))  # ADC1
 
 card_detect = Pin(15, Pin.IN, Pin.PULL_UP)
 
@@ -108,7 +109,7 @@ class SDLoggerVFS:
         Pin(self.MISO_PIN, Pin.IN, Pin.PULL_DOWN)
         Pin(self.SCK_PIN, Pin.IN, Pin.PULL_DOWN)
 
-    def write(self, rtc, value1, value2):
+    def write(self, rtc, value1, value2, value3):
         # SDカード電源ON
         self.power_on()
         # SPI初期化
@@ -122,7 +123,7 @@ class SDLoggerVFS:
         year, month, day = rtc.get_date()
         filename = f"{self.mount_point}/{year:04d}-{month:02d}-{day:02d}.txt"
         with open(filename, 'a') as f:
-            f.write(f"{value1},{value2}\n")
+            f.write(f"{value1},{value2},{value3}\n")
 
         # アンマウント
         uos.umount(self.mount_point)
@@ -149,7 +150,7 @@ def add_time_period_to_rtc_time(rtc):
         mdays = [31, 29 if is_leap(y) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         return mdays[m-1]
 
-    minute += 10    # 10 minutes later
+    minute += 1    # 10 minutes later
     if minute >= 60:
         minute -= 60
         hour += 1
@@ -208,11 +209,12 @@ if __name__ == '__main__':
                 clear_alarm_flag()
                 time.sleep_ms(5)
                 set_alarm()
-                value1 = round((adc0.read_u16() >> 4) * 3.3 * 3 / 4096, 2)
-                value2 = round((adc1.read_u16() >> 4) * 3.3 * 2 / 4096, 2)
-                print(value1, value2)
+                value1 = round((adc0.read_u16() >> 4) * 3.3 * 5 / 4096, 2)  # battery 
+                value2 = round((adc1.read_u16() >> 4) * 3.3 * 2 / 4096, 2)  # pico battery
+                value3 = round((adc2.read_u16() >> 4) * 3.3 * ((910 + 150)/150) / 4096, 2)  # solar  
+                print(value1, value2, value3)
                 if value2 > 2.0:
-                    logger.write(rtc, value1, value2)
+                    logger.write(rtc, value1, value2, value3)
                 machine.lightsleep(60000 * 10)
     except KeyboardInterrupt:
         print("terminated")
