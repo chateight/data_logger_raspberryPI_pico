@@ -150,7 +150,7 @@ def add_time_period_to_rtc_time(rtc):
         mdays = [31, 29 if is_leap(y) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         return mdays[m-1]
 
-    minute += 1    # 10 minutes later
+    minute += 10    # 10 minutes later
     if minute >= 60:
         minute -= 60
         hour += 1
